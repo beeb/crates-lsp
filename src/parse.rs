@@ -3,6 +3,17 @@ use std::{collections::HashMap, fmt::Display, sync::Arc};
 use semver::VersionReq;
 use tokio::sync::RwLock;
 use tower_lsp::lsp_types::{Position, Range, Url};
+use winnow::{
+    combinator::peek,
+    error::{ContextError, FromExternalError},
+    token::take_until,
+    Parser as _, Result,
+};
+
+fn version(input: &mut &str) -> Result<VersionReq> {
+    let text = peek(take_until(1.., '"')).parse_next(input)?;
+    VersionReq::parse(text).map_err(|e| ContextError::from_external_error(input, e))
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Dependency {
@@ -95,7 +106,7 @@ impl Display for DependencyVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             DependencyVersion::Partial { version, .. } => f.write_str(version),
-            DependencyVersion::Complete { version, .. } => write!(f, "{}", version),
+            DependencyVersion::Complete { version, .. } => f.write_str(&version.to_string()),
         }
     }
 }
