@@ -4,15 +4,22 @@ use semver::VersionReq;
 use tokio::sync::RwLock;
 use tower_lsp::lsp_types::{Position, Range, Url};
 use winnow::{
-    combinator::peek,
+    combinator::delimited,
     error::{ContextError, FromExternalError},
-    token::take_until,
+    token::take_while,
     Parser as _, Result,
 };
 
 fn version(input: &mut &str) -> Result<VersionReq> {
-    let text = peek(take_until(1.., '"')).parse_next(input)?;
-    VersionReq::parse(text).map_err(|e| ContextError::from_external_error(input, e))
+    let version_str = take_while(1.., |c: char| {
+        c.is_alphanumeric() || ".-*^~<>=, ".contains(c)
+    })
+    .parse_next(input)?;
+    VersionReq::parse(version_str).map_err(|e| ContextError::from_external_error(input, e))
+}
+
+fn package_name<'s>(input: &mut &'s str) -> Result<&'s str> {
+    delimited('"', take_while(1.., |c: char| c.is_alphanumeric()), '"').parse_next(input)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
