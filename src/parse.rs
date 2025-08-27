@@ -19,7 +19,12 @@ fn version(input: &mut &str) -> Result<VersionReq> {
 }
 
 fn package_name<'s>(input: &mut &'s str) -> Result<&'s str> {
-    delimited('"', take_while(1.., |c: char| c.is_alphanumeric()), '"').parse_next(input)
+    delimited(
+        '"',
+        take_while(1.., |c: char| c.is_alphanumeric() || "-_".contains(c)),
+        '"',
+    )
+    .parse_next(input)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
